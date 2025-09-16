@@ -1,23 +1,29 @@
 name: Modelops deploy
 
 on:
-  # Si quieres que se ejecute en cada push o PR descomenta:
-  # push:
-  #   branches: [ master ]
-  # pull_request:
-  #   branches: [ master ]
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
   repository_dispatch:
     types: [ml_ci_cd]
 
 jobs:
   ml_ci_cd:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/Mexico_City
     strategy:
       matrix:
         python-version: [3.8]
     steps:
       - uses: actions/checkout@v3
 
+      - name: Show start time (UTC & Local)
+        run: |
+          echo "⏰ UTC time:   $(date -u)"
+          echo "⏰ Local time: $(date)"
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -39,10 +45,7 @@ jobs:
       - name: Train model
         run: python model/train.py
 
-      - name: List model files
-        run: ls -la model
-
-      - name: Docker build 
+      - name: Docker build
         run: docker build -t ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }} .
 
       - name: Show images
@@ -57,3 +60,9 @@ jobs:
 
       - name: Docker push
         run: docker push ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
+
+      - name: Show end time (UTC & Local)
+        run: |
+          echo "✅ Job finished"
+          echo "⏰ UTC time:   $(date -u)"
+          echo "⏰ Local time: $(date)"
