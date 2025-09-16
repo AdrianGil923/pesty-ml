@@ -1,9 +1,5 @@
 name: Modelops deploy
 on:
-#  push:
-#branches: [ master ]
-#pull_request:
-#    branches: [ master ]
   repository_dispatch:
     types: [ml_ci_cd]
 jobs:
@@ -22,8 +18,6 @@ jobs:
       run: python --version
     - name: pip install
       run: pip install -r requirements.txt
-    - name: download dataset
-      run: wget -O data/pesticides.csv ${{github.event.client_payload.dataseturl}}
     - name: cat dataset
       run: cat data/pesticides.csv
     - name: train model
@@ -31,7 +25,7 @@ jobs:
     - name: list model 
       run: ls -la model
     - name: docker build
-      run: docker build -t ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{github.event.client_payload.sha}} .
+      run: docker build -t ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{ github.sha }} .
     - name: show images
       run: docker images
     - name: docker login
@@ -40,5 +34,5 @@ jobs:
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
       run: |
         docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
-    - name: docker- push
-      run: docker push ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{ github.event.client_payload.sha }}
+    - name: docker push
+      run: docker push ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{ github.sha }}
