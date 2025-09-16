@@ -1,4 +1,4 @@
-name: Modelops deploy
+name: Modelops deploy 
 on:
   repository_dispatch:
     types: [ml_ci_cd]
