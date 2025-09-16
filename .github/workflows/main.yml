@@ -1,51 +1,66 @@
 name: Modelops deploy
-
 on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
   repository_dispatch:
     types: [ml_ci_cd]
 
 jobs:
   ml_ci_cd:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/Mexico_City
     strategy:
       matrix:
         python-version: [3.8]
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Show start time (UTC & Local)
+        run: |
+          echo "⏰ UTC time:   $(date -u)"
+          echo "⏰ Local time: $(date)"
 
-    - name: Show Python version
-      run: python --version
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: list 
+        run: python --version
 
-    - name: Show dataset
-      run: cat data/pesticides.csv
+      - name: pip install
+        run: pip install -r requirements.txt
 
-    - name: Train model
-      run: python model/train.py
+      - name: download dataset
+        run: wget -O data/heart_disease.csv ${{ github.event.client_payload.dataseturl }}
 
-    - name: List model files
-      run: ls -la model
+      - name: cat dataset
+        run: cat data/heart_disease.csv
 
-    - name: Docker build
-      run: docker buildx build --load -t ${{ secrets.DOCKER_USER}}/${{ secrets.MODEL_NAME}}:${{ github.sha }} .
+      - name: train model
+        run: python model/train.py
 
-    - name: Show Docker images
-      run: docker images
+      - name: docker build
+        run: docker build -t ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.event.client_payload.sha }} .
 
-    - name: Docker login
-      env:
-        DOCKER_USER: ${{ secrets.DOCKER_USER }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      run: |
-        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
+      - name: show images
+        run: docker images
 
-    - name: Docker push
-      run: docker push ${{ secrets.DOCKER_USER}}/${{ secrets.MODEL_NAME}}:${{ github.sha }}
+      - name: docker login
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+
+      - name: docker push
+        run: docker push ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.event.client_payload.sha }}
+
+      - name: Show end time (UTC & Local)
+        run: |
+          echo "✅ Job finished"
+          echo "⏰ UTC time:   $(date -u)"
+          echo "⏰ Local time: $(date)"
