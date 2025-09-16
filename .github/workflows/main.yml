@@ -1,68 +1,44 @@
 name: Modelops deploy
-
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+#  push:
+#branches: [ master ]
+#pull_request:
+#    branches: [ master ]
   repository_dispatch:
     types: [ml_ci_cd]
-
 jobs:
   ml_ci_cd:
     runs-on: ubuntu-latest
-    env:
-      TZ: America/Mexico_City
     strategy:
       matrix:
         python-version: [3.8]
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Show start time (UTC & Local)
-        run: |
-          echo "⏰ UTC time:   $(date -u)"
-          echo "⏰ Local time: $(date)"
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Python version
-        run: python --version
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      # Ya no descargamos nada, dataset está en el repo
-      - name: Check dataset exists
-        run: ls -lh data/pesticides.csv
-
-      - name: Show first lines of dataset
-        run: head -n 20 data/pesticides.csv
-
-      - name: Train model
-        run: python model/train.py
-
-      - name: Docker build
-        run: docker build -t ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }} .
-
-      - name: Show images
-        run: docker images
-
-      - name: Docker login
-        env:
-          DOCKER_USER: ${{ secrets.DOCKER_USER }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        run: |
-          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
-
-      - name: Docker push
-        run: docker push ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }}
-
-      - name: Show end time (UTC & Local)
-        run: |
-          echo "✅ Job finished"
-          echo "⏰ UTC time:   $(date -u)"
-          echo "⏰ Local time: $(date)"
+    - name: list 
+      run: python --version
+    - name: pip install
+      run: pip install -r requirements.txt
+    - name: download dataset
+      run: wget -O data/pesticides.csv ${{github.event.client_payload.dataseturl}}
+    - name: cat dataset
+      run: cat data/pesticides.csv
+    - name: train model
+      run: python model/train.py
+    - name: list model 
+      run: ls -la model
+    - name: docker build
+      run: docker build -t ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{github.event.client_payload.sha}} .
+    - name: show images
+      run: docker images
+    - name: docker login
+      env:
+        DOCKER_USER: ${{secrets.DOCKER_USER}}
+        DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+      run: |
+        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
+    - name: docker- push
+      run: docker push ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{ github.event.client_payload.sha }}
