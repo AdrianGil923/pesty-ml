@@ -42,7 +42,7 @@ jobs:
       - name: List model files
         run: ls -la model
 
-      - name: Docker build
+      - name: Docker build 
         run: docker build -t ${{ secrets.DOCKER_USER }}/${{ secrets.MODEL_NAME }}:${{ github.sha }} .
 
       - name: Show images
